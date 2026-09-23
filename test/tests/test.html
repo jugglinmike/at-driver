@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <script src="../harness/harness.js"></script>
+  </head>
+  <body>
+    <input type="text" />
+    <div aria-live="assertive"></div>
+    <script>
+'use strict';
+
+const uuid4Pattern = /^[a-f0-9]{8}-[a-f0-9]{4}-
+
+test('session.new', async (t) => {
+    const id = 84743;
+    const nextMessage = await t.atDriver.once();
+    t.atDriver.send({
+      id,
+      method: 'session.new',
+      params: {
+
+      }
+    });
+    const message = await nextMessage;
+
+    assert.object(message, 'message');
+    assert.equal(message.id, id, 'message.id');
+    assert.object(message.result, 'message.result');
+    assert(
+      uuid4Pattern.test(message.result.sessionId),
+      `Expected sessionId' property to be a valid UUID4; got '${message.result.sessionId}`
+    );
+});
+
+test('sendKeys', async (t) => {
+  await t.atDriver.createSession();
+
+  const input = document.querySelector('input');
+  const keys = 'foobar'.split('');
+  input.focus();
+  await t.atDriver.userIntent({name: 'pressKeys', keys});
+  await t.pause(1000);
+  assert.equal(input.value, 'foobar');
+});
+
+test('interaction.capturedOutput', async (t) => {
+  await t.atDriver.createSession();
+  const liveRegion = document.querySelector('[aria-live]');
+  const messages = [];
+
+  t.atDriver.on((message) => messages.push(message));
+  liveRegion.innerText = 'hello';
+  await t.pause(1000);
+
+  assert(
+    messages.every(({method}) => method === 'interaction.capturedOutput'),
+    'Observed only Event messages with method "interaction.capturedOutput"
+  );
+  const string = messages.map(({params}) => params.data).join(' ');
+  assert(
+    /\bhello\b/i.test(string),
+    `The collected text "${string}" includes the string "hello"`
+  );
+});
+    </script>
+  </body>
+</html>
